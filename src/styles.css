@@ -1,0 +1,18 @@
+/* Minimal layout utilities — the only class names used in the app.
+   Everything else is inline style tokens from src/theme.js. Deliberately not
+   Tailwind: the token system is already semantic and dark-mode aware, and a
+   utility framework on top would create two competing sources of truth. */
+* { box-sizing: border-box; }
+html, body, #root { margin: 0; padding: 0; min-height: 100%; }
+
+.flex { display: flex; }
+.items-center { align-items: center; }
+.items-start { align-items: flex-start; }
+.items-baseline { align-items: baseline; }
+.justify-between { justify-content: space-between; }
+
+.rail::-webkit-scrollbar { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
