@@ -18,7 +18,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # correct them here and re-run; nothing else needs touching.
 NAMES = {
     "EHV":   "Ethics & Human Values",
-    "FMS":   "Financial Management & Systems",
+    "FMS":   "Fundamentals of Mathematics",
     "IIS":   "Information & Info Systems",
     "IKS":   "Indian Knowledge Systems",
     "OC-II": "Oral Communication II",
