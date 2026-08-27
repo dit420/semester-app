@@ -287,10 +287,13 @@ export default function App() {
         <div className="flex items-center justify-between" style={{ padding: "0 16px", marginBottom: 18, gap: 12 }}>
           <Segmented<View> T={T} value={view} onChange={setView} label="Screen"
             options={[{ value: "home", label: "Home" }, { value: "assignments", label: "Assignments" }]} />
-          <button onClick={() => signOut()} title={profile.name} style={{
-            background: "none", border: "none", padding: "4px 2px", cursor: "pointer",
-            fontFamily: FONT, fontSize: 13, fontWeight: 500, color: T.label2, flexShrink: 0,
-          }}>Sign out</button>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, flexShrink: 0 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: T.label }}>Hi, {profile.name}</span>
+            <button onClick={() => signOut()} style={{
+              background: "none", border: "none", padding: "2px", cursor: "pointer",
+              fontFamily: FONT, fontSize: 12, fontWeight: 500, color: T.label2,
+            }}>Sign out</button>
+          </div>
         </div>
 
         {assignError && (
