@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Session as AuthSession } from "@supabase/supabase-js";
 import { useTheme, FONT, num } from "./theme.js";
-import { SESSIONS, SUBS, DATES, sessionsForSubject } from "./data/timetable.js";
+import { SESSIONS, SUBS, DATES } from "./data/timetable.js";
 import { statsFor, TARGET } from "./lib/attendance.js";
 import { useDayRail } from "./hooks/useDayRail.js";
 import { key, parseKey, addDays, mins, isDone, LONG, MONTHS } from "./lib/dates.js";
@@ -9,12 +9,13 @@ import {
   getSession, onAuthChange, signOut, signInWithMagicLink,
   getProfile, createProfile, loadAttendance, setAttendance,
   listAssignments, createAssignment, updateAssignment, retractAssignment,
-  setConfirmed, setDone,
+  setConfirmed, setDone, listExtraSessions, createExtraSession,
 } from "./lib/store.js";
 import type { AssignmentFormData } from "./components/AssignmentForm.js";
+import type { NewExtraSession } from "./lib/store.js";
 import type {
   Group, Profile, Assignment, EnrichedAssignment, Session, SubjectCard,
-  AttendanceRecords, AttendanceStatus,
+  AttendanceRecords, AttendanceStatus, ExtraSession,
 } from "./types.js";
 import Card from "./components/Card.js";
 import Segmented from "./components/Segmented.js";
@@ -26,6 +27,7 @@ import ProfileSetup from "./components/ProfileSetup.js";
 import DueStrip from "./components/DueStrip.js";
 import AssignmentsScreen from "./components/AssignmentsScreen.js";
 import AssignmentForm from "./components/AssignmentForm.js";
+import AddClassForm from "./components/AddClassForm.js";
 import type { Theme } from "./theme.js";
 
 function Loading({ T }: { T: Theme }) {
@@ -58,6 +60,10 @@ export default function App() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
 
+  const [extraSessions, setExtraSessions] = useState<ExtraSession[]>([]);
+  const [classError, setClassError] = useState<string | null>(null);
+  const [classFormOpen, setClassFormOpen] = useState(false);
+
   useEffect(() => {
     getSession().then(setSession);
     const sub = onAuthChange(setSession);
@@ -74,6 +80,7 @@ export default function App() {
       setRecordsLoaded(false);
       setAssignments([]);
       setAssignmentsLoaded(false);
+      setExtraSessions([]);
       setView("home");
       return;
     }
@@ -105,6 +112,23 @@ export default function App() {
 
   const refreshAssignments = useCallback(async () => {
     setAssignments(await listAssignments());
+  }, []);
+
+  // Admin-added classes, same "load in parallel, never block home" pattern
+  // as assignments.
+  useEffect(() => {
+    if (!profile) return;
+    let cancelled = false;
+    listExtraSessions()
+      .then((rows) => { if (!cancelled) setExtraSessions(rows); })
+      .catch((err: unknown) => { if (!cancelled) setClassError(`Couldn't load classes — ${(err as Error).message}`); });
+    return () => { cancelled = true; };
+  }, [profile]);
+
+  const handleAddClass = useCallback(async (data: NewExtraSession) => {
+    await createExtraSession(data);
+    setExtraSessions(await listExtraSessions());
+    setClassFormOpen(false);
   }, []);
 
   const handleConfirm = useCallback((id: string, next: boolean) => {
@@ -158,6 +182,49 @@ export default function App() {
     SUBS.forEach(([code, name], i) => { m[code] = { name, colorIdx: i }; });
     return m;
   }, []);
+
+  // The static, generated schedule plus any admin-added classes, merged into
+  // one Session pool so statsFor() and everything downstream of it (byDate,
+  // Register, the day rail) never has to know the difference. Static
+  // sessions keep their id/n exactly as generated — attendance marks are
+  // keyed by id, so renumbering an existing one would silently detach it
+  // from whatever mark it already has. Extra sessions get fresh n values
+  // appended after the static count, and every session for that
+  // subject+group (static and extra alike) gets a recomputed shared total.
+  const allSessions: Session[] = useMemo(() => {
+    const staticByKey = new Map<string, Session[]>();
+    for (const s of SESSIONS) {
+      const k = `${s.code}|${s.group}`;
+      const arr = staticByKey.get(k);
+      if (arr) arr.push(s); else staticByKey.set(k, [s]);
+    }
+    const extraByKey = new Map<string, ExtraSession[]>();
+    for (const e of extraSessions) {
+      const k = `${e.subjectCode}|${e.group}`;
+      const arr = extraByKey.get(k);
+      if (arr) arr.push(e); else extraByKey.set(k, [e]);
+    }
+
+    const out: Session[] = [];
+    for (const k of new Set([...staticByKey.keys(), ...extraByKey.keys()])) {
+      const statics = staticByKey.get(k) ?? [];
+      const extras = extraByKey.get(k) ?? [];
+      const total = statics.length + extras.length;
+      for (const s of statics) out.push(total === s.total ? s : { ...s, total });
+      let n = statics.length;
+      for (const e of extras) {
+        n += 1;
+        const meta = subjectMeta[e.subjectCode];
+        out.push({
+          id: e.id, date: e.date, start: e.start, end: e.end,
+          code: e.subjectCode, name: meta?.name ?? e.subjectCode,
+          faculty: e.faculty ?? "TBA", total, colorIdx: meta?.colorIdx ?? 0,
+          n, group: e.group, room: e.room ?? "TBA",
+        });
+      }
+    }
+    return out;
+  }, [extraSessions, subjectMeta]);
 
   const enrichedAssignments: EnrichedAssignment[] = useMemo(
     () => assignments.map((a) => ({
@@ -215,29 +282,31 @@ export default function App() {
 
   const byDate = useMemo(() => {
     const m: Record<string, Session[]> = {};
-    for (const s of SESSIONS) {
+    for (const s of allSessions) {
       if (s.group !== group) continue;
       (m[s.date] ||= []).push(s);
     }
     for (const k of Object.keys(m)) m[k].sort((a, b) => mins(a.start) - mins(b.start));
     return m;
-  }, [group]);
+  }, [allSessions, group]);
 
   const stats: SubjectCard[] = useMemo(
-    () => SUBS.map(([code], i) => ({
-      code, colorIdx: i, name: SUBS[i][1],
-      sessions: sessionsForSubject(code, group),
-      ...statsFor(sessionsForSubject(code, group), records, todayKey, nowMin),
-    })),
-    [group, records, todayKey, nowMin]
+    () => SUBS.map(([code], i) => {
+      const sessions = allSessions.filter((s) => s.code === code && s.group === group);
+      return {
+        code, colorIdx: i, name: SUBS[i][1], sessions,
+        ...statsFor(sessions, records, todayKey, nowMin),
+      };
+    }),
+    [allSessions, group, records, todayKey, nowMin]
   );
   const statOf = useCallback((code: string) => stats.find((s) => s.code === code), [stats]);
 
   const unmarked = useMemo(
-    () => SESSIONS
+    () => allSessions
       .filter((s) => s.group === group && !records[s.id] && isDone(s, todayKey, nowMin))
       .sort((a, b) => (a.date === b.date ? mins(a.start) - mins(b.start) : a.date < b.date ? -1 : 1)),
-    [group, records, todayKey, nowMin]
+    [allSessions, group, records, todayKey, nowMin]
   );
 
   // Optimistic: the mark shows immediately. If the write fails, roll the
@@ -285,8 +354,17 @@ export default function App() {
       <div style={{ maxWidth: 1180, margin: "0 auto", padding: "22px 0 48px" }}>
         {/* top nav */}
         <div className="flex items-center justify-between" style={{ padding: "0 16px", marginBottom: 18, gap: 12 }}>
-          <Segmented<View> T={T} value={view} onChange={setView} label="Screen"
-            options={[{ value: "home", label: "Home" }, { value: "assignments", label: "Assignments" }]} />
+          <div className="flex items-center" style={{ gap: 10 }}>
+            <Segmented<View> T={T} value={view} onChange={setView} label="Screen"
+              options={[{ value: "home", label: "Home" }, { value: "assignments", label: "Assignments" }]} />
+            {profile.is_admin && (
+              <button onClick={() => setClassFormOpen(true)} style={{
+                minHeight: 36, borderRadius: 8, border: "none", cursor: "pointer",
+                background: T.fill, color: T.label, fontFamily: FONT, fontSize: 13, fontWeight: 600,
+                padding: "0 12px",
+              }}>+ Add class</button>
+            )}
+          </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, flexShrink: 0 }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: T.label }}>Hi, {profile.name}</span>
             <button onClick={() => signOut()} style={{
@@ -303,6 +381,17 @@ export default function App() {
               padding: "10px 14px", fontSize: 13, color: T.red,
             }}>
               {assignError}
+            </div>
+          </div>
+        )}
+
+        {classError && (
+          <div style={{ padding: "0 16px", marginBottom: 16 }}>
+            <div style={{
+              background: T.surface, borderRadius: 12, boxShadow: T.shadow,
+              padding: "10px 14px", fontSize: 13, color: T.red,
+            }}>
+              {classError}
             </div>
           </div>
         )}
@@ -461,6 +550,11 @@ export default function App() {
       {formOpen && (
         <AssignmentForm T={T} subjects={SUBS} initial={editingAssignment}
           onSubmit={handleCreateOrUpdate} onRetract={handleRetract} onClose={closeForm} />
+      )}
+
+      {classFormOpen && (
+        <AddClassForm T={T} subjects={SUBS} defaultGroup={group}
+          onSubmit={handleAddClass} onClose={() => setClassFormOpen(false)} />
       )}
     </div>
   );

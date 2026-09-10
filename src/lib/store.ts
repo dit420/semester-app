@@ -16,7 +16,7 @@
  * and everything that imports from this file, is fully typed from there out.
  */
 import { createClient, type Session as AuthSession, type Subscription, type RealtimePostgresChangesPayload } from "@supabase/supabase-js";
-import type { Group, Profile, Assignment, AssignmentAuthor, AttendanceRecords } from "../types.js";
+import type { Group, Profile, Assignment, AssignmentAuthor, AttendanceRecords, ExtraSession } from "../types.js";
 import type { AttendanceStatus } from "./attendance.js";
 
 export const supabase = createClient(
@@ -260,4 +260,76 @@ export function subscribeAssignments(onChange: (payload: RealtimePostgresChanges
     .on("postgres_changes", { event: "*", schema: "public", table: "assignments" }, onChange)
     .subscribe();
   return () => { supabase.removeChannel(ch); };
+}
+
+/* --------------------------------------------------------- extra sessions  */
+
+/** Raw persisted row — snake_case, pre-mapping. See supabase/migrations/0003:
+    admin-gated at the database, so this insert fails for anyone whose
+    profile isn't is_admin regardless of what the client sends. */
+interface ExtraSessionRow {
+  id: string;
+  group_code: string;
+  subject_code: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  room: string | null;
+  faculty: string | null;
+  created_by: string;
+  created_at: string;
+}
+
+export async function listExtraSessions(): Promise<ExtraSession[]> {
+  const rows = unwrap<ExtraSessionRow[]>(
+    await supabase.from("extra_sessions").select("*").is("deleted_at", null)
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    subjectCode: r.subject_code,
+    group: r.group_code as Group,
+    date: r.date,
+    start: r.start_time,
+    end: r.end_time,
+    room: r.room,
+    faculty: r.faculty,
+    createdBy: r.created_by,
+    createdAt: r.created_at,
+  }));
+}
+
+export interface NewExtraSession {
+  subjectCode: string;
+  group: Group;
+  date: string;
+  start: string;
+  end: string;
+  room: string | null;
+  faculty: string | null;
+}
+
+export async function createExtraSession({ subjectCode, group, date, start, end, room, faculty }: NewExtraSession): Promise<ExtraSessionRow> {
+  const session = await getSession();
+  return unwrap<ExtraSessionRow>(
+    await supabase.from("extra_sessions").insert({
+      created_by: session!.user.id,
+      group_code: group,
+      subject_code: subjectCode,
+      date,
+      start_time: start,
+      end_time: end,
+      room: room || null,
+      faculty: faculty || null,
+    }).select().single()
+  );
+}
+
+/** Retract, don't destroy — same soft-delete pattern as assignments. */
+export async function retractExtraSession(id: string): Promise<null> {
+  const session = await getSession();
+  return unwrap<null>(
+    await supabase.from("extra_sessions")
+      .update({ deleted_at: new Date().toISOString(), deleted_by: session!.user.id })
+      .eq("id", id)
+  );
 }

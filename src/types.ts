@@ -26,7 +26,25 @@ export interface Profile {
   id: string;
   name: string;
   group_code: Group;
+  is_admin: boolean;
   created_at: string;
+}
+
+/** An admin-added class outside the original timetable — a makeup or a
+    genuinely surprise session. Counts toward the real 80% requirement, so
+    App.tsx merges these into the same Session pool statsFor() reads, rather
+    than tracking them separately. See supabase/migrations/0003. */
+export interface ExtraSession {
+  id: string;
+  subjectCode: string;
+  group: Group;
+  date: string;
+  start: string;
+  end: string;
+  room: string | null;
+  faculty: string | null;
+  createdBy: string;
+  createdAt: string;
 }
 
 export interface AssignmentAuthor {
