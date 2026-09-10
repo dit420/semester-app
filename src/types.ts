@@ -20,6 +20,10 @@ export interface Session {
   n: number;
   group: Group;
   room: string;
+  /** True only for a session App.tsx merged in from ExtraSession — never
+      set on one generated from the static timetable. Distinguishes a
+      deletable admin-added class from the college's own fixed schedule. */
+  isExtra?: boolean;
 }
 
 export interface Profile {

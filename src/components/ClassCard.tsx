@@ -4,7 +4,7 @@ import { FONT, num } from "../theme.js";
 import type { Theme } from "../theme.js";
 import type { Session, SubjectCard, AttendanceStatus } from "../types.js";
 
-export default function ClassCard({ T, s, stat, record, live, markable, onMark, dueBadge }: {
+export default function ClassCard({ T, s, stat, record, live, markable, onMark, dueBadge, isAdmin, onDeleteClass }: {
   T: Theme;
   s: Session;
   stat: SubjectCard | undefined;
@@ -13,6 +13,8 @@ export default function ClassCard({ T, s, stat, record, live, markable, onMark, 
   markable: boolean;
   onMark: (id: string, status: AttendanceStatus | null) => void;
   dueBadge: boolean;
+  isAdmin: boolean;
+  onDeleteClass: (id: string) => void;
 }) {
   const accent = T.subject[s.colorIdx % T.subject.length];
   const cancelled = record === "cancelled";
@@ -50,6 +52,12 @@ export default function ClassCard({ T, s, stat, record, live, markable, onMark, 
               </div>
             </div>
             {live && <div style={{ fontSize: 13, fontWeight: 600, color: accent, marginTop: 4 }}>Happening now</div>}
+            {s.isExtra && isAdmin && (
+              <button onClick={() => onDeleteClass(s.id)} style={{
+                marginTop: 4, background: "none", border: "none", padding: "4px 2px 0", cursor: "pointer",
+                fontFamily: FONT, fontSize: 12, color: T.red,
+              }}>Remove class</button>
+            )}
           </div>
         </div>
 

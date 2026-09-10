@@ -9,7 +9,7 @@ import type { Session, SubjectCard, AttendanceRecords, AttendanceStatus } from "
 
 const MIN_GAP = 20; // minutes below this read as a changeover, not a free period
 
-export default function DayPanel({ T, date, list, statOf, records, todayKey, nowMin, onMark, dueSubjects = new Set() }: {
+export default function DayPanel({ T, date, list, statOf, records, todayKey, nowMin, onMark, dueSubjects = new Set(), isAdmin, onDeleteClass }: {
   T: Theme;
   date: string;
   list: Session[];
@@ -19,6 +19,8 @@ export default function DayPanel({ T, date, list, statOf, records, todayKey, now
   nowMin: number;
   onMark: (id: string, status: AttendanceStatus | null) => void;
   dueSubjects?: Set<string>;
+  isAdmin: boolean;
+  onDeleteClass: (id: string) => void;
 }) {
   const d = parseKey(date);
   const isToday = date === todayKey;
@@ -47,7 +49,7 @@ export default function DayPanel({ T, date, list, statOf, records, todayKey, now
     rows.push(
       <ClassCard key={s.id} T={T} s={s} stat={statOf(s.code)} record={records[s.id]} live={live}
         markable={date < todayKey || (isToday && nowMin >= mins(s.start))} onMark={onMark}
-        dueBadge={dueSubjects.has(s.code)} />
+        dueBadge={dueSubjects.has(s.code)} isAdmin={isAdmin} onDeleteClass={onDeleteClass} />
     );
   });
 

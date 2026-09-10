@@ -9,7 +9,7 @@ import {
   getSession, onAuthChange, signOut, signInWithMagicLink,
   getProfile, createProfile, loadAttendance, setAttendance,
   listAssignments, createAssignment, updateAssignment, retractAssignment,
-  setConfirmed, setDone, listExtraSessions, createExtraSession,
+  setConfirmed, setDone, listExtraSessions, createExtraSession, retractExtraSession,
 } from "./lib/store.js";
 import type { AssignmentFormData } from "./components/AssignmentForm.js";
 import type { NewExtraSession } from "./lib/store.js";
@@ -131,6 +131,14 @@ export default function App() {
     setClassFormOpen(false);
   }, []);
 
+  const handleDeleteClass = useCallback((id: string) => {
+    if (!window.confirm("Remove this class for everyone in the group? This can't be undone from the app.")) return;
+    setClassError(null);
+    retractExtraSession(id)
+      .then(() => setExtraSessions((rows) => rows.filter((e) => e.id !== id)))
+      .catch((err: unknown) => setClassError(`Couldn't remove that class — ${(err as Error).message}`));
+  }, []);
+
   const handleConfirm = useCallback((id: string, next: boolean) => {
     setAssignments((rows) => rows.map((r) => r.id === id
       ? { ...r, iConfirmed: next, confirmations: r.confirmations + (next ? 1 : -1) }
@@ -219,7 +227,7 @@ export default function App() {
           id: e.id, date: e.date, start: e.start, end: e.end,
           code: e.subjectCode, name: meta?.name ?? e.subjectCode,
           faculty: e.faculty ?? "TBA", total, colorIdx: meta?.colorIdx ?? 0,
-          n, group: e.group, room: e.room ?? "TBA",
+          n, group: e.group, room: e.room ?? "TBA", isExtra: true,
         });
       }
     }
@@ -478,7 +486,8 @@ export default function App() {
             <div key={dk} ref={(el) => { panelRefs.current[dk] = el; }}
               style={{ flex: "0 0 min(86%, 366px)", scrollSnapAlign: "center" }}>
               <DayPanel T={T} date={dk} list={byDate[dk] || []} statOf={statOf} records={records}
-                todayKey={todayKey} nowMin={nowMin} onMark={mark} dueSubjects={dueSubjects} />
+                todayKey={todayKey} nowMin={nowMin} onMark={mark} dueSubjects={dueSubjects}
+                isAdmin={profile.is_admin} onDeleteClass={handleDeleteClass} />
             </div>
           ))}
         </div>
