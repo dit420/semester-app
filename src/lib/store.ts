@@ -188,12 +188,19 @@ interface AssignmentListRow {
   created_at: string;
   author: AssignmentAuthor | null;
   assignment_confirmations: { user_id: string }[];
-  assignment_completions: { user_id: string }[];
+  assignment_completions: { user_id: string; completer: AssignmentAuthor | null }[];
 }
 
 /**
  * The shared list for a group, with each entry carrying its social signals
- * (who posted, how many confirmed) and the caller's own private done-state.
+ * (who posted, how many confirmed) and who's marked it done.
+ *
+ * Completion visibility note (0008): assignment_completions' read policy is
+ * now group-scoped, not caller-only, so `assignment_completions` here can
+ * legitimately contain other people's rows -- `done` has to check for the
+ * caller's own user_id specifically (same pattern as iConfirmed below), not
+ * just "array is non-empty" the way it could when RLS guaranteed the array
+ * held only the caller's own row.
  */
 export async function listAssignments(): Promise<Assignment[]> {
   const session = await getSession();
@@ -205,7 +212,7 @@ export async function listAssignments(): Promise<Assignment[]> {
         created_by, created_at,
         author:profiles!assignments_created_by_fkey ( id, name ),
         assignment_confirmations ( user_id ),
-        assignment_completions ( user_id )
+        assignment_completions ( user_id, completer:profiles!assignment_completions_user_id_fkey ( id, name ) )
       `)
       .is("deleted_at", null)
       .order("due_date", { ascending: true })
@@ -225,9 +232,8 @@ export async function listAssignments(): Promise<Assignment[]> {
     createdAt: r.created_at,
     confirmations: r.assignment_confirmations.length,
     iConfirmed: r.assignment_confirmations.some((c) => c.user_id === me),
-    // RLS means completions only ever returns the caller's own rows, so a
-    // non-empty array here is by definition "I have done this".
-    done: r.assignment_completions.length > 0,
+    done: r.assignment_completions.some((c) => c.user_id === me),
+    completedBy: r.assignment_completions.map((c) => c.completer).filter((p): p is AssignmentAuthor => p !== null),
   }));
 }
 

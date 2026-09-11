@@ -100,6 +100,9 @@ export interface Assignment {
   confirmations: number;
   iConfirmed: boolean;
   done: boolean;
+  /** Group members who've marked this done — visible to the whole group as
+      of migration 0008, a deliberate reversal of "done" being private. */
+  completedBy: AssignmentAuthor[];
 }
 
 /** Assignment plus the subject metadata (display name, colour) App.tsx

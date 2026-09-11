@@ -1,3 +1,4 @@
+import { useState } from "react";
 import Card from "./Card.js";
 import type { Theme } from "../theme.js";
 import { DAYS, MONTHS, parseKey } from "../lib/dates.js";
@@ -24,6 +25,7 @@ export default function AssignmentCard({ T, a, todayKey, onEdit, onConfirm, onDo
 }) {
   const accent = T.subject[a.colorIdx % T.subject.length];
   const overdue = !a.done && a.dueDate < todayKey;
+  const [showCompleters, setShowCompleters] = useState(false);
 
   return (
     <Card T={T} style={{ padding: "12px 14px", marginBottom: 8 }}>
@@ -71,6 +73,22 @@ export default function AssignmentCard({ T, a, todayKey, onEdit, onConfirm, onDo
               {a.done ? "✓ Done" : "Mark done"}
             </button>
           </div>
+
+          {a.completedBy.length > 0 && (
+            <div style={{ marginTop: 6 }}>
+              <button onClick={() => setShowCompleters((s) => !s)} style={{
+                background: "none", border: "none", padding: "2px 0", cursor: "pointer",
+                fontFamily: T.font, fontSize: 12, color: T.label3, textDecoration: "underline",
+              }}>
+                {a.completedBy.length} {a.completedBy.length === 1 ? "classmate has" : "classmates have"} marked this done
+              </button>
+              {showCompleters && (
+                <div style={{ fontSize: 12, color: T.label2, marginTop: 3 }}>
+                  {a.completedBy.map((p) => p.name).join(", ")}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </Card>
