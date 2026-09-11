@@ -1,5 +1,4 @@
 import Card from "./Card.js";
-import { FONT } from "../theme.js";
 import type { Theme } from "../theme.js";
 import { DAYS, MONTHS, parseKey } from "../lib/dates.js";
 import type { EnrichedAssignment } from "../types.js";
@@ -42,7 +41,7 @@ export default function AssignmentCard({ T, a, todayKey, onEdit, onConfirm, onDo
             {a.isMine && (
               <button onClick={onEdit} style={{
                 background: "none", border: "none", padding: "4px 2px", cursor: "pointer",
-                fontFamily: FONT, fontSize: 13, fontWeight: 600, color: T.blue, flexShrink: 0,
+                fontFamily: T.font, fontSize: 13, fontWeight: 600, color: T.blue, flexShrink: 0,
               }}>Edit</button>
             )}
           </div>
@@ -59,14 +58,14 @@ export default function AssignmentCard({ T, a, todayKey, onEdit, onConfirm, onDo
           <div className="flex items-center" style={{ marginTop: 10, gap: 8 }}>
             <button onClick={() => onConfirm(a.id, !a.iConfirmed)} style={{
               minHeight: 40, borderRadius: 8, border: "none", cursor: "pointer",
-              padding: "0 12px", fontFamily: FONT, fontSize: 13, fontWeight: 600,
+              padding: "0 12px", fontFamily: T.font, fontSize: 13, fontWeight: 600,
               background: a.iConfirmed ? T.blue : T.fill, color: a.iConfirmed ? "#fff" : T.label,
             }}>
               ✓ {a.confirmations} confirmed
             </button>
             <button onClick={() => onDone(a.id, !a.done)} style={{
               minHeight: 40, borderRadius: 8, border: "none", cursor: "pointer",
-              padding: "0 12px", fontFamily: FONT, fontSize: 13, fontWeight: 600,
+              padding: "0 12px", fontFamily: T.font, fontSize: 13, fontWeight: 600,
               background: a.done ? T.green : T.fill, color: a.done ? "#fff" : T.label,
             }}>
               {a.done ? "✓ Done" : "Mark done"}

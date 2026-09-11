@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import type { Session as AuthSession } from "@supabase/supabase-js";
-import { useTheme, FONT, num } from "./theme.js";
+import { useTheme, num } from "./theme.js";
 import { SESSIONS, SUBS, DATES } from "./data/timetable.js";
 import { statsFor, TARGET } from "./lib/attendance.js";
 import { useDayRail } from "./hooks/useDayRail.js";
@@ -40,7 +40,7 @@ function Loading({ T }: { T: Theme }) {
   return (
     <div style={{
       minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
-      background: T.bg, fontFamily: FONT, color: T.label2, fontSize: 15,
+      background: T.bg, fontFamily: T.font, color: T.label2, fontSize: 15,
     }}>
       Loading…
     </div>
@@ -434,7 +434,7 @@ export default function App() {
 
   return (
     <div style={{
-      background: T.bg, minHeight: "100vh", fontFamily: FONT, color: T.label,
+      background: T.bg, minHeight: "100vh", fontFamily: T.font, color: T.label,
       ["--focus-color" as string]: T.blue,
     } as CSSProperties}>
 
@@ -446,13 +446,13 @@ export default function App() {
               options={[
                 { value: "home", label: "Home" },
                 { value: "assignments", label: "Assignments" },
-                { value: "classmates", label: "Classmates" },
                 { value: "chat", label: "Chat" },
+                { value: "classmates", label: "Classmates" },
               ]} />
             {profile.is_admin && (
               <button onClick={() => setClassFormOpen(true)} style={{
                 minHeight: 36, borderRadius: 8, border: "none", cursor: "pointer",
-                background: T.fill, color: T.label, fontFamily: FONT, fontSize: 13, fontWeight: 600,
+                background: T.fill, color: T.label, fontFamily: T.font, fontSize: 13, fontWeight: 600,
                 padding: "0 12px",
               }}>+ Add class</button>
             )}
@@ -465,7 +465,7 @@ export default function App() {
             </button>
             <button onClick={() => signOut()} style={{
               background: "none", border: "none", padding: "2px", cursor: "pointer",
-              fontFamily: FONT, fontSize: 12, fontWeight: 500, color: T.label2,
+              fontFamily: T.font, fontSize: 12, fontWeight: 500, color: T.label2,
             }}>Sign out</button>
           </div>
         </div>
@@ -546,7 +546,7 @@ export default function App() {
             {!onToday && (
               <button onClick={() => centerOn(anchorIdx, true)} style={{
                 background: "none", border: "none", padding: "4px 2px", cursor: "pointer",
-                fontFamily: FONT, fontSize: 15, fontWeight: 600, color: T.blue,
+                fontFamily: T.font, fontSize: 15, fontWeight: 600, color: T.blue,
               }}>Today</button>
             )}
           </div>

@@ -32,7 +32,6 @@ export default function ClassmatesScreen({ T, classmates, myId, loaded }: {
                   }}>
                     {c.name}{c.id === myId && <span style={{ color: T.label3, fontWeight: 500 }}> (you)</span>}
                   </div>
-                  {c.isAdmin && <div style={{ fontSize: 12, color: T.blue, fontWeight: 600, marginTop: 1 }}>Admin</div>}
                 </div>
               </div>
             </Card>

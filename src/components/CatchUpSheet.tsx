@@ -1,7 +1,7 @@
 import Card from "./Card.js";
 import Action from "./Action.js";
 import { DAYS, MONTHS, parseKey } from "../lib/dates.js";
-import { FONT, num } from "../theme.js";
+import { num } from "../theme.js";
 import type { Theme } from "../theme.js";
 import type { Session, AttendanceStatus } from "../types.js";
 
@@ -32,7 +32,7 @@ export default function CatchUpSheet({ T, sessions, onMark, onClose }: {
           </div>
           <button onClick={onClose} style={{
             background: "none", border: "none", padding: "4px 2px", cursor: "pointer",
-            fontFamily: FONT, fontSize: 17, fontWeight: 600, color: T.blue, flexShrink: 0,
+            fontFamily: T.font, fontSize: 17, fontWeight: 600, color: T.blue, flexShrink: 0,
           }}>Done</button>
         </div>
 

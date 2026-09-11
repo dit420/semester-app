@@ -1,8 +1,14 @@
 /* Semantic design tokens, one palette per theme. Values follow a platform
    system palette rather than one-off hex per component — never hardcode a
    colour in a component, add a token here instead, or switching themes
-   silently breaks one screen. */
+   silently breaks one screen. Font is a token too, same reasoning: it lives
+   on the theme object (T.font), not a module-level constant, so a themed
+   screen can carry its own typeface without every component needing to
+   know which theme is active. */
 import { useEffect, useState, type CSSProperties } from "react";
+
+const SYSTEM_FONT =
+  `-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif`;
 
 export const LIGHT = {
   bg: "#F2F2F7", surface: "#FFFFFF", surfaceAlt: "#FFFFFF",
@@ -11,6 +17,7 @@ export const LIGHT = {
   blue: "#007AFF", green: "#34C759", red: "#FF3B30", orange: "#FF9500", gray: "#8E8E93",
   shadow: "0 1px 3px rgba(0,0,0,0.06)", pillShadow: "0 3px 8px rgba(0,0,0,0.12)",
   subject: ["#007AFF", "#34C759", "#5856D6", "#FF9500", "#FF2D55", "#AF52DE", "#FF3B30", "#30B0C7", "#A2845E"],
+  font: SYSTEM_FONT,
 };
 
 export type Theme = typeof LIGHT;
@@ -22,6 +29,7 @@ export const DARK: Theme = {
   blue: "#0A84FF", green: "#30D158", red: "#FF453A", orange: "#FF9F0A", gray: "#8E8E93",
   shadow: "none", pillShadow: "0 3px 8px rgba(0,0,0,0.4)",
   subject: ["#0A84FF", "#30D158", "#5E5CE6", "#FF9F0A", "#FF375F", "#BF5AF2", "#FF453A", "#40C8E0", "#AC8E68"],
+  font: SYSTEM_FONT,
 };
 
 /* Deep blue-black rather than DARK's neutral near-black — a distinct dark
@@ -33,6 +41,7 @@ export const MIDNIGHT: Theme = {
   blue: "#5B9CFF", green: "#3FD68C", red: "#FF6B6B", orange: "#FFB454", gray: "#8E93B0",
   shadow: "none", pillShadow: "0 3px 10px rgba(0,0,10,0.6)",
   subject: ["#5B9CFF", "#3FD68C", "#8C8CFF", "#FFB454", "#FF7096", "#C48CFF", "#FF6B6B", "#4AD0E0", "#C0946B"],
+  font: SYSTEM_FONT,
 };
 
 /* Warm, paper-toned light option. */
@@ -43,10 +52,37 @@ export const SEPIA: Theme = {
   blue: "#0A6E8C", green: "#4C7A3B", red: "#B84B3E", orange: "#C4791F", gray: "#8A7A63",
   shadow: "0 1px 3px rgba(58,46,34,0.10)", pillShadow: "0 3px 8px rgba(58,46,34,0.16)",
   subject: ["#0A6E8C", "#4C7A3B", "#6A5A9A", "#C4791F", "#B0466B", "#8A5AA8", "#B84B3E", "#2E8F94", "#8A5A3A"],
+  font: SYSTEM_FONT,
+};
+
+/* Bright, bold, panel-shadow palette. Comic Sans MS ships on Windows and
+   macOS, with Comic Neue and cursive as fallbacks, so this needs no font
+   file loaded over the network. */
+export const COMIC: Theme = {
+  bg: "#FFF6DE", surface: "#FFFFFF", surfaceAlt: "#FFF0F7",
+  label: "#232323", label2: "rgba(35,35,35,0.65)", label3: "rgba(35,35,35,0.35)",
+  separator: "rgba(35,35,35,0.22)", fill: "rgba(255,64,129,0.14)",
+  blue: "#1E6FEB", green: "#2ECC71", red: "#FF3860", orange: "#FFA400", gray: "#8E8E93",
+  shadow: "0 2px 0 rgba(35,35,35,0.15)", pillShadow: "0 3px 0 rgba(35,35,35,0.22)",
+  subject: ["#1E6FEB", "#2ECC71", "#9B5DE5", "#FFA400", "#FF3860", "#F15BB5", "#00BBF9", "#FF6B35", "#FEE440"],
+  font: `"Comic Sans MS", "Comic Neue", cursive, ${SYSTEM_FONT}`,
+};
+
+/* Soft pastel lavender, friendly rounded font — a low-key "hang out" feel
+   rather than the comic theme's loud one. Trebuchet MS / Verdana are both
+   long-standing system fonts across Windows and macOS. */
+export const COZY: Theme = {
+  bg: "#F7F3FB", surface: "#FFFFFF", surfaceAlt: "#FBF6FF",
+  label: "#3D3450", label2: "rgba(61,52,80,0.62)", label3: "rgba(61,52,80,0.32)",
+  separator: "rgba(61,52,80,0.20)", fill: "rgba(167,139,250,0.14)",
+  blue: "#7C6FEF", green: "#4CAF82", red: "#E8607A", orange: "#E8975A", gray: "#9691A8",
+  shadow: "0 1px 4px rgba(93,74,140,0.10)", pillShadow: "0 3px 10px rgba(93,74,140,0.18)",
+  subject: ["#7C6FEF", "#4CAF82", "#B98BE0", "#E8975A", "#E8607A", "#C77DDA", "#5FB4C7", "#E85D6B", "#B78A5E"],
+  font: `"Trebuchet MS", Verdana, ${SYSTEM_FONT}`,
 };
 
 /** Matches profiles.theme_preference's check constraint exactly. */
-export type ThemePreference = "system" | "light" | "dark" | "midnight" | "sepia";
+export type ThemePreference = "system" | "light" | "dark" | "midnight" | "sepia" | "comic" | "cozy";
 
 export const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
   { value: "system", label: "Match device" },
@@ -54,14 +90,17 @@ export const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
   { value: "dark", label: "Dark" },
   { value: "midnight", label: "Midnight" },
   { value: "sepia", label: "Sepia" },
+  { value: "comic", label: "Comic" },
+  { value: "cozy", label: "Cozy" },
 ];
 
 const NAMED_THEMES: Record<Exclude<ThemePreference, "system">, Theme> = {
-  light: LIGHT, dark: DARK, midnight: MIDNIGHT, sepia: SEPIA,
+  light: LIGHT, dark: DARK, midnight: MIDNIGHT, sepia: SEPIA, comic: COMIC, cozy: COZY,
 };
 
-export const FONT =
-  `-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif`;
+/** Kept as a plain export too — SYSTEM_FONT is what every non-decorative
+    theme's `font` points at, and nothing outside this file needs it. */
+export const FONT = SYSTEM_FONT;
 
 /* Type scale: 34 large title · 22 title · 17 headline/body · 15 subhead · 13 footnote · 12 caption */
 export const num: CSSProperties = { fontVariantNumeric: "tabular-nums" };

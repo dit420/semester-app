@@ -1,5 +1,4 @@
 import { useState, type FormEvent } from "react";
-import { FONT } from "../theme.js";
 import type { Theme } from "../theme.js";
 import type { Assignment } from "../types.js";
 
@@ -55,7 +54,7 @@ export default function AssignmentForm({ T, subjects, initial, onSubmit, onRetra
 
   const inputStyle = {
     width: "100%", minHeight: 44, borderRadius: 10, border: `1px solid ${T.separator}`,
-    background: T.bg, color: T.label, fontFamily: FONT, fontSize: 16,
+    background: T.bg, color: T.label, fontFamily: T.font, fontSize: 16,
     padding: "0 12px", boxSizing: "border-box" as const, marginBottom: 14,
   };
   const labelStyle = { display: "block", fontSize: 13, color: T.label2, marginBottom: 6 };
@@ -78,7 +77,7 @@ export default function AssignmentForm({ T, subjects, initial, onSubmit, onRetra
           </h2>
           <button onClick={onClose} style={{
             background: "none", border: "none", padding: "4px 2px", cursor: "pointer",
-            fontFamily: FONT, fontSize: 17, fontWeight: 600, color: T.label2, flexShrink: 0,
+            fontFamily: T.font, fontSize: 17, fontWeight: 600, color: T.label2, flexShrink: 0,
           }}>Cancel</button>
         </div>
 
@@ -112,7 +111,7 @@ export default function AssignmentForm({ T, subjects, initial, onSubmit, onRetra
           <button type="submit" disabled={busy} style={{
             width: "100%", minHeight: 44, borderRadius: 10, border: "none",
             cursor: busy ? "default" : "pointer", background: T.blue, color: "#fff",
-            fontFamily: FONT, fontSize: 16, fontWeight: 600, opacity: busy ? 0.6 : 1,
+            fontFamily: T.font, fontSize: 16, fontWeight: 600, opacity: busy ? 0.6 : 1,
           }}>
             {busy ? "Saving…" : editing ? "Save changes" : "Post"}
           </button>
@@ -128,18 +127,18 @@ export default function AssignmentForm({ T, subjects, initial, onSubmit, onRetra
                 <div className="flex" style={{ gap: 8 }}>
                   <button onClick={() => setConfirmingRetract(false)} disabled={busy} style={{
                     flex: 1, minHeight: 40, borderRadius: 9, border: "none", cursor: "pointer",
-                    background: T.fill, color: T.label, fontFamily: FONT, fontSize: 15, fontWeight: 600,
+                    background: T.fill, color: T.label, fontFamily: T.font, fontSize: 15, fontWeight: 600,
                   }}>Keep it</button>
                   <button onClick={retract} disabled={busy} style={{
                     flex: 1, minHeight: 40, borderRadius: 9, border: "none", cursor: "pointer",
-                    background: T.red, color: "#fff", fontFamily: FONT, fontSize: 15, fontWeight: 600,
+                    background: T.red, color: "#fff", fontFamily: T.font, fontSize: 15, fontWeight: 600,
                   }}>Retract</button>
                 </div>
               </div>
             ) : (
               <button onClick={() => setConfirmingRetract(true)} disabled={busy} style={{
                 width: "100%", minHeight: 40, background: "none", border: "none", cursor: "pointer",
-                fontFamily: FONT, fontSize: 15, fontWeight: 600, color: T.red,
+                fontFamily: T.font, fontSize: 15, fontWeight: 600, color: T.red,
               }}>Retract this post</button>
             )}
           </div>

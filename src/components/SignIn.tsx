@@ -1,5 +1,4 @@
 import { useState, type FormEvent } from "react";
-import { FONT } from "../theme.js";
 import type { Theme } from "../theme.js";
 
 export default function SignIn({ T, onSubmit }: { T: Theme; onSubmit: (email: string, inviteCode: string) => Promise<unknown> }) {
@@ -27,7 +26,7 @@ export default function SignIn({ T, onSubmit }: { T: Theme; onSubmit: (email: st
   return (
     <div style={{
       minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
-      background: T.bg, fontFamily: FONT, color: T.label, padding: 16,
+      background: T.bg, fontFamily: T.font, color: T.label, padding: 16,
     }}>
       <div style={{ width: "100%", maxWidth: 360, background: T.surface, borderRadius: 16, boxShadow: T.shadow, padding: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, margin: "0 0 4px", letterSpacing: "-0.02em" }}>Sign in</h1>
@@ -46,7 +45,7 @@ export default function SignIn({ T, onSubmit }: { T: Theme; onSubmit: (email: st
               placeholder="you@example.com" autoFocus required autoComplete="email"
               style={{
                 width: "100%", minHeight: 44, borderRadius: 10, border: `1px solid ${T.separator}`,
-                background: T.bg, color: T.label, fontFamily: FONT, fontSize: 16,
+                background: T.bg, color: T.label, fontFamily: T.font, fontSize: 16,
                 padding: "0 12px", boxSizing: "border-box", marginBottom: 12,
               }}
             />
@@ -55,7 +54,7 @@ export default function SignIn({ T, onSubmit }: { T: Theme; onSubmit: (email: st
               placeholder="Invite code" autoComplete="off"
               style={{
                 width: "100%", minHeight: 44, borderRadius: 10, border: `1px solid ${T.separator}`,
-                background: T.bg, color: T.label, fontFamily: FONT, fontSize: 16,
+                background: T.bg, color: T.label, fontFamily: T.font, fontSize: 16,
                 padding: "0 12px", boxSizing: "border-box", marginBottom: 4,
               }}
             />
@@ -66,7 +65,7 @@ export default function SignIn({ T, onSubmit }: { T: Theme; onSubmit: (email: st
             <button type="submit" disabled={busy} style={{
               width: "100%", minHeight: 44, borderRadius: 10, border: "none",
               cursor: busy ? "default" : "pointer", background: T.blue, color: "#fff",
-              fontFamily: FONT, fontSize: 16, fontWeight: 600, opacity: busy ? 0.6 : 1,
+              fontFamily: T.font, fontSize: 16, fontWeight: 600, opacity: busy ? 0.6 : 1,
             }}>
               {busy ? "Sending…" : "Send link"}
             </button>

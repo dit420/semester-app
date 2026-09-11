@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type ChangeEvent } from "react";
-import { FONT, num } from "../theme.js";
+import { num } from "../theme.js";
 import type { Theme } from "../theme.js";
 import type { ChatMessage } from "../types.js";
 import Avatar from "./Avatar.js";
@@ -118,7 +118,7 @@ export default function ChatScreen({ T, messages, loaded, myId, isAdmin, onSend,
                   {m.attachmentPath && m.attachmentName && (
                     <button onClick={() => download(m.attachmentPath!, m.attachmentName!)} style={{
                       marginTop: m.body ? 4 : 0, minHeight: 40, borderRadius: 12, border: `1px solid ${T.separator}`,
-                      background: T.surface, color: T.label, cursor: "pointer", fontFamily: FONT,
+                      background: T.surface, color: T.label, cursor: "pointer", fontFamily: T.font,
                       padding: "6px 12px", textAlign: "left", maxWidth: "100%",
                       display: "flex", alignItems: "center", gap: 8,
                     }}>
@@ -137,7 +137,7 @@ export default function ChatScreen({ T, messages, loaded, myId, isAdmin, onSend,
                   {canRetract && (
                     <button onClick={() => onRetract(m.id)} style={{
                       marginTop: 3, background: "none", border: "none", padding: "2px", cursor: "pointer",
-                      fontFamily: FONT, fontSize: 11, color: T.label3,
+                      fontFamily: T.font, fontSize: 11, color: T.label3,
                     }}>Remove</button>
                   )}
                 </div>
@@ -175,13 +175,13 @@ export default function ChatScreen({ T, messages, loaded, myId, isAdmin, onSend,
           placeholder="Message your group…"
           style={{
             flex: 1, minHeight: 44, borderRadius: 10, border: `1px solid ${T.separator}`,
-            background: T.bg, color: T.label, fontFamily: FONT, fontSize: 16,
+            background: T.bg, color: T.label, fontFamily: T.font, fontSize: 16,
             padding: "0 12px", boxSizing: "border-box",
           }} />
         <button type="submit" disabled={busy || (!body.trim() && !file)} style={{
           minHeight: 44, borderRadius: 10, border: "none", flexShrink: 0,
           cursor: busy ? "default" : "pointer", background: T.blue, color: "#fff",
-          fontFamily: FONT, fontSize: 15, fontWeight: 600, padding: "0 18px",
+          fontFamily: T.font, fontSize: 15, fontWeight: 600, padding: "0 18px",
           opacity: (busy || (!body.trim() && !file)) ? 0.5 : 1,
         }}>Send</button>
       </form>

@@ -1,4 +1,4 @@
-import { FONT, num } from "../theme.js";
+import { num } from "../theme.js";
 import type { Theme } from "../theme.js";
 import { DAYS, MONTHS, parseKey } from "../lib/dates.js";
 import type { EnrichedAssignment } from "../types.js";
@@ -14,7 +14,7 @@ export default function DueStrip({ T, items, onOpen }: { T: Theme; items: Enrich
         <span style={{ fontSize: 15, fontWeight: 600, letterSpacing: "-0.01em", color: T.label }}>Due this week</span>
         <button onClick={onOpen} style={{
           background: "none", border: "none", padding: "4px 2px", cursor: "pointer",
-          fontFamily: FONT, fontSize: 13, fontWeight: 600, color: T.blue,
+          fontFamily: T.font, fontSize: 13, fontWeight: 600, color: T.blue,
         }}>See all</button>
       </div>
       <div className="flex" style={{ gap: 8, overflowX: "auto", scrollbarWidth: "none", paddingBottom: 2 }}>
@@ -25,7 +25,7 @@ export default function DueStrip({ T, items, onOpen }: { T: Theme; items: Enrich
             <button key={a.id} onClick={onOpen} style={{
               flex: "0 0 auto", width: 180, minHeight: 44, textAlign: "left", cursor: "pointer",
               background: T.surface, borderRadius: 12, boxShadow: T.shadow, border: "none",
-              padding: "10px 12px", fontFamily: FONT,
+              padding: "10px 12px", fontFamily: T.font,
             }}>
               <div className="flex items-center" style={{ gap: 6, marginBottom: 3 }}>
                 <span style={{ width: 8, height: 8, borderRadius: 4, background: accent, flexShrink: 0 }} />

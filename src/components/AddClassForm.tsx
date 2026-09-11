@@ -1,5 +1,4 @@
 import { useState, type FormEvent } from "react";
-import { FONT } from "../theme.js";
 import type { Theme } from "../theme.js";
 import type { Group } from "../types.js";
 import type { NewExtraSession } from "../lib/store.js";
@@ -40,7 +39,7 @@ export default function AddClassForm({ T, subjects, defaultGroup, onSubmit, onCl
 
   const inputStyle = {
     width: "100%", minHeight: 44, borderRadius: 10, border: `1px solid ${T.separator}`,
-    background: T.bg, color: T.label, fontFamily: FONT, fontSize: 16,
+    background: T.bg, color: T.label, fontFamily: T.font, fontSize: 16,
     padding: "0 12px", boxSizing: "border-box" as const, marginBottom: 14,
   };
   const labelStyle = { display: "block", fontSize: 13, color: T.label2, marginBottom: 6 };
@@ -61,7 +60,7 @@ export default function AddClassForm({ T, subjects, defaultGroup, onSubmit, onCl
           <h2 style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em", margin: 0 }}>Add class</h2>
           <button onClick={onClose} style={{
             background: "none", border: "none", padding: "4px 2px", cursor: "pointer",
-            fontFamily: FONT, fontSize: 17, fontWeight: 600, color: T.label2, flexShrink: 0,
+            fontFamily: T.font, fontSize: 17, fontWeight: 600, color: T.label2, flexShrink: 0,
           }}>Cancel</button>
         </div>
         <p style={{ fontSize: 13, color: T.label2, margin: "0 0 14px" }}>
@@ -111,7 +110,7 @@ export default function AddClassForm({ T, subjects, defaultGroup, onSubmit, onCl
           <button type="submit" disabled={busy} style={{
             width: "100%", minHeight: 44, borderRadius: 10, border: "none",
             cursor: busy ? "default" : "pointer", background: T.blue, color: "#fff",
-            fontFamily: FONT, fontSize: 16, fontWeight: 600, opacity: busy ? 0.6 : 1,
+            fontFamily: T.font, fontSize: 16, fontWeight: 600, opacity: busy ? 0.6 : 1,
           }}>
             {busy ? "Adding…" : "Add class"}
           </button>

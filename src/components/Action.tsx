@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { FONT } from "../theme.js";
 import type { Theme } from "../theme.js";
 
 /* Minimum height 40 plus surrounding padding keeps the tap target at ~44,
@@ -13,7 +12,7 @@ export default function Action({ T, label, tone, onClick }: { T: Theme; label: s
       onMouseLeave={() => setHover(false)}
       style={{
         flex: 1, minHeight: 40, borderRadius: 9, border: "none", cursor: "pointer",
-        fontFamily: FONT, fontSize: 15, fontWeight: 600, letterSpacing: "-0.01em",
+        fontFamily: T.font, fontSize: 15, fontWeight: 600, letterSpacing: "-0.01em",
         background: hover ? tone : T.fill, color: hover ? "#fff" : tone,
         transition: "background 140ms, color 140ms",
       }}

@@ -1,5 +1,4 @@
 import { useRef, useState, type ChangeEvent } from "react";
-import { FONT } from "../theme.js";
 import type { Theme, ThemePreference } from "../theme.js";
 import { THEME_OPTIONS } from "../theme.js";
 import type { Profile } from "../types.js";
@@ -58,7 +57,7 @@ export default function ProfileScreen({ T, profile, onSaveName, onSaveTheme, onU
   const labelStyle = { display: "block", fontSize: 13, color: T.label2, marginBottom: 6 };
   const inputStyle = {
     width: "100%", minHeight: 44, borderRadius: 10, border: `1px solid ${T.separator}`,
-    background: T.bg, color: T.label, fontFamily: FONT, fontSize: 16,
+    background: T.bg, color: T.label, fontFamily: T.font, fontSize: 16,
     padding: "0 12px", boxSizing: "border-box" as const,
   };
 
@@ -78,7 +77,7 @@ export default function ProfileScreen({ T, profile, onSaveName, onSaveTheme, onU
           <h2 style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em", margin: 0 }}>Your profile</h2>
           <button onClick={onClose} style={{
             background: "none", border: "none", padding: "4px 2px", cursor: "pointer",
-            fontFamily: FONT, fontSize: 17, fontWeight: 600, color: T.blue, flexShrink: 0,
+            fontFamily: T.font, fontSize: 17, fontWeight: 600, color: T.blue, flexShrink: 0,
           }}>Done</button>
         </div>
 
@@ -87,7 +86,7 @@ export default function ProfileScreen({ T, profile, onSaveName, onSaveTheme, onU
           <div>
             <button onClick={pickFile} disabled={avatarBusy} style={{
               minHeight: 40, borderRadius: 9, border: "none", cursor: avatarBusy ? "default" : "pointer",
-              background: T.fill, color: T.label, fontFamily: FONT, fontSize: 14, fontWeight: 600,
+              background: T.fill, color: T.label, fontFamily: T.font, fontSize: 14, fontWeight: 600,
               padding: "0 14px", opacity: avatarBusy ? 0.6 : 1,
             }}>{avatarBusy ? "Uploading…" : "Change photo"}</button>
             <div style={{ fontSize: 12, color: T.label3, marginTop: 6 }}>JPEG, PNG or WebP, up to 2 MB</div>
@@ -102,7 +101,7 @@ export default function ProfileScreen({ T, profile, onSaveName, onSaveTheme, onU
           <button onClick={saveName} disabled={nameBusy || !name.trim() || name.trim() === profile.name} style={{
             minHeight: 44, borderRadius: 10, border: "none",
             cursor: nameBusy ? "default" : "pointer", background: T.blue, color: "#fff",
-            fontFamily: FONT, fontSize: 15, fontWeight: 600, padding: "0 16px",
+            fontFamily: T.font, fontSize: 15, fontWeight: 600, padding: "0 16px",
             opacity: (nameBusy || !name.trim() || name.trim() === profile.name) ? 0.5 : 1,
           }}>{nameBusy ? "Saving…" : "Save"}</button>
         </div>
@@ -117,7 +116,7 @@ export default function ProfileScreen({ T, profile, onSaveName, onSaveTheme, onU
                 style={{
                 minHeight: 44, borderRadius: 10, border: `1px solid ${on ? T.blue : T.separator}`,
                 background: on ? T.fill : "transparent", color: T.label,
-                fontFamily: FONT, fontSize: 15, fontWeight: on ? 600 : 500,
+                fontFamily: T.font, fontSize: 15, fontWeight: on ? 600 : 500,
                 textAlign: "left", padding: "0 14px", cursor: "pointer",
                 display: "flex", alignItems: "center", justifyContent: "space-between",
               }}>

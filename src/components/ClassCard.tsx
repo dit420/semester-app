@@ -1,6 +1,6 @@
 import Card from "./Card.js";
 import Action from "./Action.js";
-import { FONT, num } from "../theme.js";
+import { num } from "../theme.js";
 import type { Theme } from "../theme.js";
 import type { Session, SubjectCard, AttendanceStatus } from "../types.js";
 
@@ -55,7 +55,7 @@ export default function ClassCard({ T, s, stat, record, live, markable, onMark, 
             {s.isExtra && isAdmin && (
               <button onClick={() => onDeleteClass(s.id)} style={{
                 marginTop: 4, background: "none", border: "none", padding: "4px 2px 0", cursor: "pointer",
-                fontFamily: FONT, fontSize: 12, color: T.red,
+                fontFamily: T.font, fontSize: 12, color: T.red,
               }}>Remove class</button>
             )}
           </div>
@@ -64,7 +64,7 @@ export default function ClassCard({ T, s, stat, record, live, markable, onMark, 
         {cancelled ? (
           <button onClick={() => onMark(s.id, null)} style={{
             marginTop: 10, background: "none", border: "none", padding: "4px 2px", cursor: "pointer",
-            fontFamily: FONT, fontSize: 13, color: T.blue,
+            fontFamily: T.font, fontSize: 13, color: T.blue,
           }}>Class cancelled · undo</button>
         ) : record ? (
           <div className="flex items-center justify-between" style={{ marginTop: 10, gap: 8 }}>
@@ -73,7 +73,7 @@ export default function ClassCard({ T, s, stat, record, live, markable, onMark, 
             </span>
             <button onClick={() => onMark(s.id, null)} style={{
               background: "none", border: "none", padding: "4px 2px", cursor: "pointer",
-              fontFamily: FONT, fontSize: 15, color: T.blue,
+              fontFamily: T.font, fontSize: 15, color: T.blue,
             }}>Undo</button>
           </div>
         ) : markable ? (
@@ -84,7 +84,7 @@ export default function ClassCard({ T, s, stat, record, live, markable, onMark, 
               title="Class was cancelled"
               style={{
                 minHeight: 40, minWidth: 44, borderRadius: 9, border: "none", background: T.fill,
-                color: T.label2, fontFamily: FONT, fontSize: 15, cursor: "pointer",
+                color: T.label2, fontFamily: T.font, fontSize: 15, cursor: "pointer",
               }}>—</button>
           </div>
         ) : (

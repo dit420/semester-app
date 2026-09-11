@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import Card from "./Card.js";
 import AssignmentCard from "./AssignmentCard.js";
-import { FONT } from "../theme.js";
 import type { Theme } from "../theme.js";
 import type { EnrichedAssignment } from "../types.js";
 
@@ -45,7 +44,7 @@ export default function AssignmentsScreen({ T, assignments, todayKey, weekEndKey
         <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.02em", margin: 0 }}>Assignments</h1>
         <button onClick={onAdd} style={{
           minHeight: 40, borderRadius: 20, border: "none", cursor: "pointer",
-          background: T.blue, color: "#fff", fontFamily: FONT, fontSize: 15, fontWeight: 600,
+          background: T.blue, color: "#fff", fontFamily: T.font, fontSize: 15, fontWeight: 600,
           padding: "0 16px",
         }}>+ Add</button>
       </div>
