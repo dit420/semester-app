@@ -34,6 +34,7 @@ import ClassmatesScreen from "./components/ClassmatesScreen.js";
 import ChatScreen from "./components/ChatScreen.js";
 import ProfileScreen from "./components/ProfileScreen.js";
 import Avatar from "./components/Avatar.js";
+import UpcomingAssignmentToast from "./components/UpcomingAssignmentToast.js";
 import type { Theme } from "./theme.js";
 
 function Loading({ T }: { T: Theme }) {
@@ -101,6 +102,7 @@ export default function App() {
       setChatMessages([]);
       setChatLoaded(false);
       setProfileScreenOpen(false);
+      setChatUnreadSince(null);
       setView("home");
       return;
     }
@@ -349,6 +351,66 @@ export default function App() {
     [enrichedAssignments, todayKey, weekEndKey]
   );
 
+  // Badge on the Assignments tab: how many the student hasn't checked done.
+  const undoneAssignmentsCount = useMemo(
+    () => assignments.filter((a) => !a.done).length,
+    [assignments]
+  );
+
+  // Badge on the Chat tab. There's no server-side read tracking for chat --
+  // this is a per-device localStorage mark, scoped by user id so a shared
+  // browser doesn't leak one account's read state into another's. First
+  // ever visit sets the mark to "now" rather than counting the whole
+  // group's chat history as unread.
+  const [chatUnreadSince, setChatUnreadSince] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!profile) { setChatUnreadSince(null); return; }
+    const storageKey = `chat-last-seen-${profile.id}`;
+    const stored = localStorage.getItem(storageKey);
+    if (stored) {
+      setChatUnreadSince(stored);
+    } else {
+      const nowIso = new Date().toISOString();
+      localStorage.setItem(storageKey, nowIso);
+      setChatUnreadSince(nowIso);
+    }
+  }, [profile]);
+
+  // While the chat tab is open, every message counts as seen immediately --
+  // covers both "just switched to chat" and "new message arrived while
+  // already there" (the realtime subscription refetches on every change).
+  useEffect(() => {
+    if (!profile || view !== "chat") return;
+    const nowIso = new Date().toISOString();
+    localStorage.setItem(`chat-last-seen-${profile.id}`, nowIso);
+    setChatUnreadSince(nowIso);
+  }, [profile, view, chatMessages]);
+
+  const unreadChatCount = useMemo(
+    () => chatUnreadSince === null ? 0 : chatMessages.filter((m) => !m.isMine && m.createdAt > chatUnreadSince).length,
+    [chatMessages, chatUnreadSince]
+  );
+
+  // Slide-in toast for the nearest thing due this week, once per browser
+  // session (sessionStorage, not localStorage) -- fires again on a fresh
+  // tab/window, not on every internal re-render.
+  const [toastAssignment, setToastAssignment] = useState<EnrichedAssignment | null>(null);
+  const [toastVisible, setToastVisible] = useState(false);
+
+  useEffect(() => {
+    if (!assignmentsLoaded || dueThisWeek.length === 0) return;
+    if (sessionStorage.getItem("shown-upcoming-toast")) return;
+    sessionStorage.setItem("shown-upcoming-toast", "1");
+    setToastAssignment(dueThisWeek[0]);
+    const showTimer = setTimeout(() => setToastVisible(true), 400);
+    const hideTimer = setTimeout(() => setToastVisible(false), 400 + 6000);
+    return () => { clearTimeout(showTimer); clearTimeout(hideTimer); };
+  }, [assignmentsLoaded, dueThisWeek]);
+
+  const dismissToast = useCallback(() => setToastVisible(false), []);
+  const openToastAssignment = useCallback(() => { setView("assignments"); setToastVisible(false); }, []);
+
   // Every calendar day in the term, including days with no classes, so that
   // "today" always has a panel to land on.
   const dates = useMemo(() => {
@@ -445,8 +507,8 @@ export default function App() {
             <Segmented<View> T={T} value={view} onChange={setView} label="Screen"
               options={[
                 { value: "home", label: "Home" },
-                { value: "assignments", label: "Assignments" },
-                { value: "chat", label: "Chat" },
+                { value: "assignments", label: "Assignments", badge: undoneAssignmentsCount },
+                { value: "chat", label: "Chat", badge: unreadChatCount },
                 { value: "classmates", label: "Classmates" },
               ]} />
             {profile.is_admin && (
@@ -684,6 +746,11 @@ export default function App() {
       {profileScreenOpen && (
         <ProfileScreen T={T} profile={profile} onSaveName={handleSaveName} onSaveTheme={handleSaveTheme}
           onUploadAvatar={handleUploadAvatar} onClose={() => setProfileScreenOpen(false)} />
+      )}
+
+      {toastAssignment && (
+        <UpcomingAssignmentToast T={T} assignment={toastAssignment} show={toastVisible}
+          onOpen={openToastAssignment} onDismiss={dismissToast} />
       )}
     </div>
   );
