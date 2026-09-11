@@ -16,7 +16,10 @@
  * and everything that imports from this file, is fully typed from there out.
  */
 import { createClient, type Session as AuthSession, type Subscription, type RealtimePostgresChangesPayload } from "@supabase/supabase-js";
-import type { Group, Profile, Assignment, AssignmentAuthor, AttendanceRecords, ExtraSession } from "../types.js";
+import type {
+  Group, Profile, Assignment, AssignmentAuthor, AttendanceRecords, ExtraSession,
+  Classmate, ChatMessage, ThemePreference,
+} from "../types.js";
 import type { AttendanceStatus } from "./attendance.js";
 
 export const supabase = createClient(
@@ -75,6 +78,49 @@ export async function createProfile({ name, groupCode }: { name: string; groupCo
       .select()
       .single()
   );
+}
+
+export interface ProfileUpdate {
+  name?: string;
+  avatar_path?: string | null;
+  theme_preference?: ThemePreference;
+}
+
+/** group_code and is_admin deliberately aren't accepted here — 0002/0004's
+    trigger would reject a client attempt at either anyway, so ProfileUpdate
+    doesn't even offer the option. */
+export async function updateProfile(patch: ProfileUpdate): Promise<Profile> {
+  const session = await getSession();
+  return unwrap<Profile>(
+    await supabase.from("profiles").update(patch).eq("id", session!.user.id).select().single()
+  );
+}
+
+/** Uploads to the caller's own folder (enforced by the avatars bucket's own
+    RLS, not just this path convention) and points the profile at it. */
+export async function uploadAvatar(file: File): Promise<string> {
+  const session = await getSession();
+  const userId = session!.user.id;
+  const ext = file.name.split(".").pop() ?? "jpg";
+  const path = `${userId}/avatar-${Date.now()}.${ext}`;
+  const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+  if (error) throw new Error(error.message);
+  await updateProfile({ avatar_path: path });
+  return path;
+}
+
+/** avatars is a public bucket (see 0006) — this is just URL construction,
+    no network round trip, safe to call per-render. */
+export function avatarUrl(path: string | null): string | null {
+  if (!path) return null;
+  return supabase.storage.from("avatars").getPublicUrl(path).data.publicUrl;
+}
+
+export async function listClassmates(): Promise<Classmate[]> {
+  const rows = unwrap<{ id: string; name: string; avatar_path: string | null; is_admin: boolean }[]>(
+    await supabase.from("profiles").select("id, name, avatar_path, is_admin").order("name")
+  );
+  return rows.map((r) => ({ id: r.id, name: r.name, avatarPath: r.avatar_path, isAdmin: r.is_admin }));
 }
 
 /* ------------------------------------------------------------- attendance  */
@@ -332,4 +378,119 @@ export async function retractExtraSession(id: string): Promise<null> {
       .update({ deleted_at: new Date().toISOString(), deleted_by: session!.user.id })
       .eq("id", id)
   );
+}
+
+/* -------------------------------------------------------------------- chat */
+
+interface ChatMessageRow {
+  id: string;
+  user_id: string;
+  body: string | null;
+  attachment_path: string | null;
+  attachment_name: string | null;
+  attachment_size: number | null;
+  created_at: string;
+  author: { id: string; name: string; avatar_path: string | null } | null;
+}
+
+/** Most recent `limit` messages, oldest first (ready to render top-to-bottom
+    with the composer pinned below). */
+export async function listChatMessages(limit = 100): Promise<ChatMessage[]> {
+  const session = await getSession();
+  const rows = unwrap<ChatMessageRow[]>(
+    await supabase
+      .from("chat_messages")
+      .select(`
+        id, user_id, body, attachment_path, attachment_name, attachment_size, created_at,
+        author:profiles!chat_messages_user_id_fkey ( id, name, avatar_path )
+      `)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
+      .limit(limit)
+  );
+
+  const me = session?.user?.id;
+  return rows.reverse().map((r) => ({
+    id: r.id,
+    userId: r.user_id,
+    authorName: r.author?.name ?? "Someone",
+    authorAvatarPath: r.author?.avatar_path ?? null,
+    body: r.body,
+    attachmentPath: r.attachment_path,
+    attachmentName: r.attachment_name,
+    attachmentSize: r.attachment_size,
+    createdAt: r.created_at,
+    isMine: r.user_id === me,
+  }));
+}
+
+export interface NewChatMessage {
+  groupCode: Group;
+  body: string | null;
+  file?: File | null;
+}
+
+/** groupCode comes from the caller (App.tsx already holds the signed-in
+    profile) rather than being refetched here — RLS still independently
+    checks group_code = my_group() regardless of what's sent. */
+export async function sendChatMessage({ groupCode, body, file }: NewChatMessage): Promise<null> {
+  const session = await getSession();
+  const userId = session!.user.id;
+
+  let attachmentPath: string | null = null;
+  let attachmentName: string | null = null;
+  let attachmentSize: number | null = null;
+
+  if (file) {
+    const path = `${userId}/${Date.now()}-${file.name}`;
+    const { error } = await supabase.storage.from("chat-files").upload(path, file);
+    if (error) throw new Error(error.message);
+    attachmentPath = path;
+    attachmentName = file.name;
+    attachmentSize = file.size;
+  }
+
+  return unwrap<null>(
+    await supabase.from("chat_messages").insert({
+      user_id: userId,
+      group_code: groupCode,
+      body: body?.trim() || null,
+      attachment_path: attachmentPath,
+      attachment_name: attachmentName,
+      attachment_size: attachmentSize,
+    })
+  );
+}
+
+/** Retract, don't destroy. RLS allows this for the author or any admin —
+    see 0006 for why chat differs from assignments' author-only rule. */
+export async function retractChatMessage(id: string): Promise<null> {
+  const session = await getSession();
+  return unwrap<null>(
+    await supabase.from("chat_messages")
+      .update({ deleted_at: new Date().toISOString(), deleted_by: session!.user.id })
+      .eq("id", id)
+  );
+}
+
+/** chat-files is a private bucket (0006): read access is tied to being in
+    the same group as the message the file is attached to, so this has to
+    be a signed, time-limited URL rather than a public one. Call on demand
+    (e.g. when a download link is clicked), not eagerly per message. */
+export async function chatFileUrl(path: string): Promise<string> {
+  const { data, error } = await supabase.storage.from("chat-files").createSignedUrl(path, 3600);
+  if (error) throw new Error(error.message);
+  return data.signedUrl;
+}
+
+/** Live updates. The realtime payload is the raw row only (no author join),
+    so callers refetch the list on any change rather than trying to merge a
+    partial payload — simple, and chat volume here is low enough that
+    refetching is cheap. */
+export function subscribeChatMessages(onChange: (payload: RealtimePostgresChangesPayload<ChatMessageRow>) => void): () => void {
+  const ch = supabase
+    .channel("chat_messages")
+    .on("postgres_changes", { event: "*", schema: "public", table: "chat_messages" }, onChange)
+    .subscribe();
+  return () => { supabase.removeChannel(ch); };
 }

@@ -7,6 +7,9 @@ export type Group = "A" | "B";
 import type { AttendanceStatus, AttendanceRecords, SubjectStats } from "./lib/attendance.js";
 export type { AttendanceStatus, AttendanceRecords, SubjectStats };
 
+import type { ThemePreference } from "./theme.js";
+export type { ThemePreference };
+
 export interface Session {
   id: string;
   date: string;
@@ -31,7 +34,33 @@ export interface Profile {
   name: string;
   group_code: Group;
   is_admin: boolean;
+  theme_preference: ThemePreference;
+  avatar_path: string | null;
   created_at: string;
+}
+
+/** A group member as shown on the Classmates tab. Same profiles rows
+    listAssignments()'s author join already reads — RLS already scopes this
+    to "my own group or myself", so no new data exposure, just a screen. */
+export interface Classmate {
+  id: string;
+  name: string;
+  avatarPath: string | null;
+  isAdmin: boolean;
+}
+
+/** The shape src/lib/store.ts's listChatMessages() maps every row into. */
+export interface ChatMessage {
+  id: string;
+  userId: string;
+  authorName: string;
+  authorAvatarPath: string | null;
+  body: string | null;
+  attachmentPath: string | null;
+  attachmentName: string | null;
+  attachmentSize: number | null;
+  createdAt: string;
+  isMine: boolean;
 }
 
 /** An admin-added class outside the original timetable — a makeup or a

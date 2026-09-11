@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import type { Session as AuthSession } from "@supabase/supabase-js";
 import { useTheme, FONT, num } from "./theme.js";
 import { SESSIONS, SUBS, DATES } from "./data/timetable.js";
@@ -7,15 +7,17 @@ import { useDayRail } from "./hooks/useDayRail.js";
 import { key, parseKey, addDays, mins, isDone, LONG, MONTHS } from "./lib/dates.js";
 import {
   getSession, onAuthChange, signOut, signInWithMagicLink,
-  getProfile, createProfile, loadAttendance, setAttendance,
+  getProfile, createProfile, updateProfile, uploadAvatar, listClassmates,
+  loadAttendance, setAttendance,
   listAssignments, createAssignment, updateAssignment, retractAssignment,
   setConfirmed, setDone, listExtraSessions, createExtraSession, retractExtraSession,
+  listChatMessages, sendChatMessage, retractChatMessage, chatFileUrl, subscribeChatMessages,
 } from "./lib/store.js";
 import type { AssignmentFormData } from "./components/AssignmentForm.js";
 import type { NewExtraSession } from "./lib/store.js";
 import type {
   Group, Profile, Assignment, EnrichedAssignment, Session, SubjectCard,
-  AttendanceRecords, AttendanceStatus, ExtraSession,
+  AttendanceRecords, AttendanceStatus, ExtraSession, Classmate, ChatMessage, ThemePreference,
 } from "./types.js";
 import Card from "./components/Card.js";
 import Segmented from "./components/Segmented.js";
@@ -28,6 +30,10 @@ import DueStrip from "./components/DueStrip.js";
 import AssignmentsScreen from "./components/AssignmentsScreen.js";
 import AssignmentForm from "./components/AssignmentForm.js";
 import AddClassForm from "./components/AddClassForm.js";
+import ClassmatesScreen from "./components/ClassmatesScreen.js";
+import ChatScreen from "./components/ChatScreen.js";
+import ProfileScreen from "./components/ProfileScreen.js";
+import Avatar from "./components/Avatar.js";
 import type { Theme } from "./theme.js";
 
 function Loading({ T }: { T: Theme }) {
@@ -41,14 +47,13 @@ function Loading({ T }: { T: Theme }) {
   );
 }
 
-type View = "home" | "assignments";
+type View = "home" | "assignments" | "classmates" | "chat";
 
 export default function App() {
-  const T = useTheme();
-
   // undefined = still checking, null = signed out, object = signed in.
   const [session, setSession] = useState<AuthSession | null | undefined>(undefined);
   const [profile, setProfile] = useState<Profile | null | undefined>(undefined);
+  const T = useTheme(profile?.theme_preference);
   const [records, setRecords] = useState<AttendanceRecords>({});
   const [recordsLoaded, setRecordsLoaded] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -63,6 +68,16 @@ export default function App() {
   const [extraSessions, setExtraSessions] = useState<ExtraSession[]>([]);
   const [classError, setClassError] = useState<string | null>(null);
   const [classFormOpen, setClassFormOpen] = useState(false);
+
+  const [classmates, setClassmates] = useState<Classmate[]>([]);
+  const [classmatesLoaded, setClassmatesLoaded] = useState(false);
+  const [classmatesError, setClassmatesError] = useState<string | null>(null);
+
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatLoaded, setChatLoaded] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
+
+  const [profileScreenOpen, setProfileScreenOpen] = useState(false);
 
   useEffect(() => {
     getSession().then(setSession);
@@ -81,6 +96,11 @@ export default function App() {
       setAssignments([]);
       setAssignmentsLoaded(false);
       setExtraSessions([]);
+      setClassmates([]);
+      setClassmatesLoaded(false);
+      setChatMessages([]);
+      setChatLoaded(false);
+      setProfileScreenOpen(false);
       setView("home");
       return;
     }
@@ -137,6 +157,63 @@ export default function App() {
     retractExtraSession(id)
       .then(() => setExtraSessions((rows) => rows.filter((e) => e.id !== id)))
       .catch((err: unknown) => setClassError(`Couldn't remove that class — ${(err as Error).message}`));
+  }, []);
+
+  // Classmates, same "load in parallel, never block home" pattern. RLS
+  // already scopes this to "my own group or myself" (profiles_read, 0001),
+  // so this is a new screen over existing access, not new exposure.
+  useEffect(() => {
+    if (!profile) return;
+    let cancelled = false;
+    listClassmates()
+      .then((rows) => { if (!cancelled) { setClassmates(rows); setClassmatesLoaded(true); } })
+      .catch((err: unknown) => { if (!cancelled) setClassmatesError(`Couldn't load classmates — ${(err as Error).message}`); });
+    return () => { cancelled = true; };
+  }, [profile]);
+
+  // Chat: load recent messages, then subscribe for live updates. The
+  // realtime payload carries no author join (see store.ts), so on any
+  // change this just refetches the small recent-message list rather than
+  // trying to merge a partial row.
+  useEffect(() => {
+    if (!profile) return;
+    let cancelled = false;
+    const refresh = () => listChatMessages().then((rows) => { if (!cancelled) setChatMessages(rows); });
+    refresh()
+      .then(() => { if (!cancelled) setChatLoaded(true); })
+      .catch((err: unknown) => { if (!cancelled) setChatError(`Couldn't load chat — ${(err as Error).message}`); });
+    const unsubscribe = subscribeChatMessages(() => { refresh(); });
+    return () => { cancelled = true; unsubscribe(); };
+  }, [profile]);
+
+  const handleSendChat = useCallback(async (body: string | null, file: File | null) => {
+    // Always the signer's own group, independent of the schedule view
+    // toggle — RLS would reject anything else anyway, but sending should
+    // never silently fail just because someone's browsing the other
+    // group's timetable.
+    await sendChatMessage({ groupCode: profile!.group_code, body, file });
+    setChatMessages(await listChatMessages());
+  }, [profile]);
+
+  const handleRetractChat = useCallback((id: string) => {
+    if (!window.confirm("Remove this message for everyone in the group?")) return;
+    setChatError(null);
+    retractChatMessage(id)
+      .then(() => setChatMessages((rows) => rows.filter((m) => m.id !== id)))
+      .catch((err: unknown) => setChatError(`Couldn't remove that message — ${(err as Error).message}`));
+  }, []);
+
+  const handleSaveName = useCallback(async (name: string) => {
+    setProfile(await updateProfile({ name }));
+  }, []);
+
+  const handleSaveTheme = useCallback(async (theme: ThemePreference) => {
+    setProfile(await updateProfile({ theme_preference: theme }));
+  }, []);
+
+  const handleUploadAvatar = useCallback(async (file: File) => {
+    await uploadAvatar(file);
+    setProfile(await getProfile());
   }, []);
 
   const handleConfirm = useCallback((id: string, next: boolean) => {
@@ -356,15 +433,22 @@ export default function App() {
   const daysLeft = dates.filter((d) => d >= todayKey).length;
 
   return (
-    <div style={{ background: T.bg, minHeight: "100vh", fontFamily: FONT, color: T.label }}>
-      <style>{`button:focus-visible{outline:3px solid ${T.blue};outline-offset:2px}`}</style>
+    <div style={{
+      background: T.bg, minHeight: "100vh", fontFamily: FONT, color: T.label,
+      ["--focus-color" as string]: T.blue,
+    } as CSSProperties}>
 
       <div style={{ maxWidth: 1180, margin: "0 auto", padding: "22px 0 48px" }}>
         {/* top nav */}
         <div className="flex items-center justify-between" style={{ padding: "0 16px", marginBottom: 18, gap: 12 }}>
           <div className="flex items-center" style={{ gap: 10 }}>
             <Segmented<View> T={T} value={view} onChange={setView} label="Screen"
-              options={[{ value: "home", label: "Home" }, { value: "assignments", label: "Assignments" }]} />
+              options={[
+                { value: "home", label: "Home" },
+                { value: "assignments", label: "Assignments" },
+                { value: "classmates", label: "Classmates" },
+                { value: "chat", label: "Chat" },
+              ]} />
             {profile.is_admin && (
               <button onClick={() => setClassFormOpen(true)} style={{
                 minHeight: 36, borderRadius: 8, border: "none", cursor: "pointer",
@@ -373,8 +457,12 @@ export default function App() {
               }}>+ Add class</button>
             )}
           </div>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, flexShrink: 0 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: T.label }}>Hi, {profile.name}</span>
+          <div className="flex items-center" style={{ gap: 10, flexShrink: 0 }}>
+            <button onClick={() => setProfileScreenOpen(true)} className="flex items-center" title="Your profile"
+              style={{ background: "none", border: "none", padding: "2px", cursor: "pointer", gap: 8 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: T.label }}>Hi, {profile.name}</span>
+              <Avatar T={T} path={profile.avatar_path} name={profile.name} size={30} />
+            </button>
             <button onClick={() => signOut()} style={{
               background: "none", border: "none", padding: "2px", cursor: "pointer",
               fontFamily: FONT, fontSize: 12, fontWeight: 500, color: T.label2,
@@ -404,10 +492,37 @@ export default function App() {
           </div>
         )}
 
+        {classmatesError && (
+          <div style={{ padding: "0 16px", marginBottom: 16 }}>
+            <div style={{
+              background: T.surface, borderRadius: 12, boxShadow: T.shadow,
+              padding: "10px 14px", fontSize: 13, color: T.red,
+            }}>
+              {classmatesError}
+            </div>
+          </div>
+        )}
+
+        {chatError && (
+          <div style={{ padding: "0 16px", marginBottom: 16 }}>
+            <div style={{
+              background: T.surface, borderRadius: 12, boxShadow: T.shadow,
+              padding: "10px 14px", fontSize: 13, color: T.red,
+            }}>
+              {chatError}
+            </div>
+          </div>
+        )}
+
         {view === "assignments" ? (
           <AssignmentsScreen T={T} assignments={enrichedAssignments} todayKey={todayKey} weekEndKey={weekEndKey}
             loaded={assignmentsLoaded} onAdd={openCreate} onEdit={openEdit}
             onConfirm={handleConfirm} onDone={handleDoneToggle} />
+        ) : view === "classmates" ? (
+          <ClassmatesScreen T={T} classmates={classmates} myId={profile.id} loaded={classmatesLoaded} />
+        ) : view === "chat" ? (
+          <ChatScreen T={T} messages={chatMessages} loaded={chatLoaded} myId={profile.id} isAdmin={profile.is_admin}
+            onSend={handleSendChat} onRetract={handleRetractChat} onDownload={chatFileUrl} />
         ) : (
       <>
         {/* header */}
@@ -564,6 +679,11 @@ export default function App() {
       {classFormOpen && (
         <AddClassForm T={T} subjects={SUBS} defaultGroup={group}
           onSubmit={handleAddClass} onClose={() => setClassFormOpen(false)} />
+      )}
+
+      {profileScreenOpen && (
+        <ProfileScreen T={T} profile={profile} onSaveName={handleSaveName} onSaveTheme={handleSaveTheme}
+          onUploadAvatar={handleUploadAvatar} onClose={() => setProfileScreenOpen(false)} />
       )}
     </div>
   );

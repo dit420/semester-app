@@ -13,6 +13,11 @@ html, body, #root { margin: 0; padding: 0; min-height: 100%; }
 
 .rail::-webkit-scrollbar { display: none; }
 
+/* --focus-color is set per-theme on the root element in App.tsx (a style
+   *property*, not a <style> tag) — this rule stays a real external
+   stylesheet either way, so it needs no 'unsafe-inline' in style-src. */
+button:focus-visible { outline: 3px solid var(--focus-color, #007AFF); outline-offset: 2px; }
+
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
